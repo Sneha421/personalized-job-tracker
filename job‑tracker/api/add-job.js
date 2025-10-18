@@ -1,4 +1,4 @@
-const { Client } = require('@notionhq/client');
+import { Client } from '@notionhq/client';
 
 export default async function handler(req, res) {
   // Only allow POST requests
