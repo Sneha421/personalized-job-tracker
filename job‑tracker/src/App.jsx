@@ -102,7 +102,14 @@ export default function App() {
       }
     }
     
+    // Listen for custom events from browser extension
+    const handleCustomEvent = (e) => {
+      console.log('🔄 Custom event detected - new job from browser extension')
+      checkForNewJobs()
+    }
+    
     window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('job-tracker-new-job', handleCustomEvent)
 
     // Set up real-time subscription
     const subscription = supabase
@@ -122,6 +129,7 @@ export default function App() {
       subscription.unsubscribe()
       clearInterval(interval)
       window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('job-tracker-new-job', handleCustomEvent)
     }
   }, [])
 
