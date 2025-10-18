@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test React App</title>
+</head>
+<body>
+    <h1>Testing React App Connection</h1>
+    <p>If you can see this, the React app is working!</p>
+    <script>
+        // Test localStorage communication
+        console.log('🧪 Testing localStorage communication...');
+        
+        // Simulate a job application
+        const testJob = {
+            title: 'Test Software Engineer',
+            company: 'Test Company',
+            url: 'https://test.com/job',
+            applied: new Date().toISOString()
+        };
+        
+        // Store in localStorage
+        localStorage.setItem('newJob', JSON.stringify(testJob));
+        localStorage.setItem('newJobTimestamp', Date.now().toString());
+        
+        // Dispatch custom event
+        window.dispatchEvent(new CustomEvent('job-tracker-new-job', { 
+            detail: testJob 
+        }));
+        
+        console.log('✅ Test job dispatched:', testJob);
+    </script>
+</body>
+</html>
+
+

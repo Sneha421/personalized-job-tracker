@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './lib/supabase'
 import { addJobToNotion } from './lib/notion'
 
 export default function App() {
@@ -10,6 +9,9 @@ export default function App() {
 
   // Load jobs from localStorage
   useEffect(() => {
+    console.log('🚀 React app loaded!')
+    console.log('🔍 Checking for existing jobs in localStorage...')
+    
     const loadJobsFromStorage = () => {
       try {
         const storedJobs = localStorage.getItem('jobTrackerJobs')
@@ -33,8 +35,11 @@ export default function App() {
 
     // Check for new jobs from browser extension
     const checkForNewJobs = () => {
+      console.log('🔍 Checking for new jobs...')
       const newJob = localStorage.getItem('newJob')
       const newJobTimestamp = localStorage.getItem('newJobTimestamp')
+      console.log('🔍 newJob:', newJob)
+      console.log('🔍 newJobTimestamp:', newJobTimestamp)
       
       if (newJob && newJobTimestamp) {
         console.log('🔄 New job detected from browser extension')
@@ -46,7 +51,7 @@ export default function App() {
         if (now - timestamp < 5 * 60 * 1000) {
           console.log('📝 Processing job:', job.title, 'at', job.company)
           
-          // Add job to localStorage AND sync to Supabase/Notion
+          // Add job to localStorage
           const addJobToStorage = async () => {
             try {
               console.log('💾 Adding job to localStorage...')
@@ -73,32 +78,20 @@ export default function App() {
               
               console.log('✅ Job added to localStorage:', jobWithId.title, 'at', jobWithId.company)
               
-              // Sync to Supabase
-              try {
-                console.log('💾 Syncing to Supabase...')
-                const { data: supabaseData, error: supabaseError } = await supabase
-                  .from('jobs')
-                  .insert([job])
-                  .select()
-                  .single()
-                
-                if (supabaseError) throw supabaseError
-                console.log('✅ Job synced to Supabase:', supabaseData.id)
-              } catch (supabaseError) {
-                console.error('❌ Supabase sync failed:', supabaseError)
-              }
-              
               // Sync to Notion
               try {
                 console.log('📋 Syncing to Notion...')
+                console.log('📋 Job data being sent to Notion:', jobWithId)
                 const notionResult = await addJobToNotion(jobWithId)
+                console.log('📋 Notion result:', notionResult)
                 if (notionResult.success) {
                   console.log('✅ Job synced to Notion')
                 } else {
                   console.log('⚠️ Notion sync failed:', notionResult.message)
                 }
               } catch (notionError) {
-                console.error('❌ Notion sync failed:', notionError)
+                console.error('❌ Notion sync failed:', notionError.message)
+                console.error('❌ Notion error details:', notionError)
               }
               
               // Clear the newJob localStorage
@@ -128,6 +121,7 @@ export default function App() {
 
     // Listen for storage events (when localStorage changes in other tabs)
     const handleStorageChange = (e) => {
+      console.log('🔄 Storage event detected:', e.key, e.newValue)
       if (e.key === 'newJob' && e.newValue) {
         console.log('🔄 Storage event detected - new job from another tab')
         checkForNewJobs()
@@ -136,32 +130,32 @@ export default function App() {
     
     // Listen for custom events from browser extension
     const handleCustomEvent = (e) => {
-      console.log('🔄 Custom event detected - new job from browser extension')
+      console.log('🔄 Custom event detected - new job from browser extension', e.detail)
       checkForNewJobs()
     }
+    
+    // Listen for BroadcastChannel messages from other tabs
+    const handleBroadcastMessage = (e) => {
+      console.log('🔄 BroadcastChannel message received:', e.data)
+      if (e.data.type === 'new-job') {
+        console.log('🔄 New job from BroadcastChannel:', e.data.job)
+        checkForNewJobs()
+      }
+    }
+    
+    const broadcastChannel = new BroadcastChannel('job-tracker')
+    broadcastChannel.addEventListener('message', handleBroadcastMessage)
+    console.log('🔊 BroadcastChannel created and listening for messages')
     
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('job-tracker-new-job', handleCustomEvent)
 
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('jobs')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'jobs' },
-        payload => {
-          if (payload.eventType === 'INSERT') {
-            setJobs(prev => [payload.new, ...prev])
-          }
-        }
-      )
-      .subscribe()
-
     return () => {
-      subscription.unsubscribe()
       clearInterval(interval)
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('job-tracker-new-job', handleCustomEvent)
+      broadcastChannel.removeEventListener('message', handleBroadcastMessage)
+      broadcastChannel.close()
     }
   }, [])
 
@@ -185,7 +179,6 @@ export default function App() {
       setLoading(false)
     }
   }
-
 
   const stats = {
     total: jobs.length,
@@ -267,10 +260,53 @@ export default function App() {
                   if (newJob) {
                     console.log('Found job in localStorage:', JSON.parse(newJob))
                   }
+                  
+                  // Also check all localStorage keys
+                  console.log('All localStorage keys:', Object.keys(localStorage))
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i)
+                    console.log(`localStorage[${key}]:`, localStorage.getItem(key))
+                  }
                 }}
                 className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Check localStorage
+              </button>
+              <button
+                onClick={() => {
+                  console.log('🧪 Testing job processing manually')
+                  // Manually set a test job in localStorage
+                  const testJob = {
+                    title: 'Test Job',
+                    company: 'Test Company',
+                    url: 'https://example.com',
+                    applied: new Date().toISOString()
+                  }
+                  localStorage.setItem('newJob', JSON.stringify(testJob))
+                  localStorage.setItem('newJobTimestamp', Date.now().toString())
+                  console.log('🧪 Test job set in localStorage')
+                  
+                  // Also test BroadcastChannel
+                  const channel = new BroadcastChannel('job-tracker')
+                  channel.postMessage({
+                    type: 'new-job',
+                    job: testJob
+                  })
+                  console.log('🧪 BroadcastChannel message sent')
+                  channel.close()
+                  
+                  // Trigger the check
+                  setTimeout(() => {
+                    console.log('🧪 Triggering manual check...')
+                    const newJob = localStorage.getItem('newJob')
+                    const newJobTimestamp = localStorage.getItem('newJobTimestamp')
+                    console.log('🧪 Manual check - newJob:', newJob)
+                    console.log('🧪 Manual check - newJobTimestamp:', newJobTimestamp)
+                  }, 100)
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Test Job
               </button>
               <button
                 onClick={refreshJobs}
@@ -295,7 +331,7 @@ export default function App() {
             <div className="flex items-center">
               <div className="p-2 bg-blue-600 rounded-lg">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 01-2-2V6" />
                 </svg>
               </div>
               <div className="ml-4">

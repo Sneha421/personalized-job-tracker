@@ -1,8 +1,6 @@
-import { Client } from '@notionhq/client'
-
 /**
  * Add a job row to your Notion database.
- * Direct client-side Notion integration.
+ * Uses local server to avoid CORS issues.
  *
  * @param {object} job
  *   { title: string, company: string, url: string, applied: string }
@@ -13,49 +11,28 @@ export async function addJobToNotion(job) {
     throw new Error('Invalid job data provided')
   }
   
-  // Check for environment variables
-  const notionToken = import.meta.env.VITE_NOTION_TOKEN
-  const notionDbId = import.meta.env.VITE_NOTION_DB_ID
-  
-  if (!notionToken || !notionDbId) {
-    console.log('Notion credentials not configured')
-    return {
-      success: false,
-      message: 'Notion credentials not configured. Please set VITE_NOTION_TOKEN and VITE_NOTION_DB_ID in your .env file.'
-    }
-  }
-  
   try {
-    console.log('Adding job to Notion:', job)
+    console.log('Adding job to Notion via local server:', job)
     
-    // Initialize Notion client
-    const notion = new Client({
-      auth: notionToken
+    // Use local server to avoid CORS issues
+    const response = await fetch('http://localhost:4000/api/notion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(job)
     })
 
-    // Create a new page in the Notion database
-    const response = await notion.pages.create({
-      parent: { database_id: notionDbId },
-      properties: {
-        title: {
-          title: [{ text: { content: job.title } }]
-        },
-        company: {
-          rich_text: [{ text: { content: job.company } }]
-        },
-        url: {
-          url: job.url
-        },
-        applied: {
-          date: { start: job.applied }
-        }
-      }
-    })
-    
-    console.log('Job added to Notion successfully:', response.id)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Notion API error: ${response.status} ${errorText}`)
+    }
+
+    const result = await response.json()
+    console.log('Job added to Notion successfully:', result)
     return {
       success: true,
-      notionPageId: response.id,
+      notionPageId: result.id,
       message: 'Job successfully added to Notion database'
     }
   } catch (error) {

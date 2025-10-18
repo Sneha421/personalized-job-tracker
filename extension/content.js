@@ -179,13 +179,46 @@ async function postJob(job) {
     localStorage.setItem('newJob', JSON.stringify(job));
     localStorage.setItem('newJobTimestamp', Date.now().toString());
     
-    // Also trigger a custom event to notify the React app immediately
+    // Use BroadcastChannel to communicate across tabs
+    console.log('🔊 Creating BroadcastChannel for cross-tab communication');
+    const channel = new BroadcastChannel('job-tracker');
+    channel.postMessage({
+      type: 'new-job',
+      job: job
+    });
+    console.log('🔊 BroadcastChannel message sent:', { type: 'new-job', job });
+    channel.close();
+    
+    // Also trigger a custom event for same-tab communication
     window.dispatchEvent(new CustomEvent('job-tracker-new-job', { 
       detail: job 
     }));
     
-    console.info('Job‑Tracker: job stored locally and event dispatched', job);
-    showToast(`✅ Applied to "${job.title}" at ${job.company}`);
+    // Directly sync to Notion via local server
+    try {
+      console.log('📋 Syncing to Notion directly from extension...');
+      const response = await fetch('http://localhost:4000/api/notion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(job)
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Job synced to Notion:', result);
+        showToast(`✅ Applied to "${job.title}" at ${job.company} - Synced to Notion!`);
+      } else {
+        console.error('❌ Notion sync failed:', response.status);
+        showToast(`✅ Applied to "${job.title}" at ${job.company} - Notion sync failed`);
+      }
+    } catch (notionError) {
+      console.error('❌ Notion sync error:', notionError);
+      showToast(`✅ Applied to "${job.title}" at ${job.company} - Notion sync error`);
+    }
+    
+    console.info('Job‑Tracker: job stored locally and synced to Notion', job);
   } catch (err) {
     console.error('Job‑Tracker: storage error', err);
     showToast('⚠️  Failed to save job');
@@ -217,10 +250,15 @@ function showToast(msg) {
    5️⃣  Attach a global click listener
    ---------------------------------------------------------- */
 function init() {
+  console.log('🚀 Job-Tracker extension loaded and ready!');
+  console.log('🔍 Extension is active on:', window.location.href);
+  
   document.body.addEventListener('click', (e) => {
     const el = e.target.closest(APPLY_BUTTONS.join(','));
     if (!el || !isApplyButton(el)) return;
 
+    console.log('🎯 Apply button clicked:', el.innerText || el.textContent);
+    
     // Optional: prevent the original navigation so you stay on the page
     // e.preventDefault();
 

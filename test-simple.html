@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: white; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { background: #2d2d2d; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Job Tracker Test</h1>
+        
+        <div class="test-section">
+            <h2>Test 1: localStorage Communication</h2>
+            <button onclick="testLocalStorage()">Test localStorage</button>
+            <div id="localStorage-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test 2: Simulate Job Application</h2>
+            <button onclick="simulateJob()">Simulate Job Application</button>
+            <div id="job-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test 3: Check React App Connection</h2>
+            <button onclick="checkReactApp()">Check React App</button>
+            <div id="react-result"></div>
+        </div>
+    </div>
+
+    <script>
+        function testLocalStorage() {
+            const result = document.getElementById('localStorage-result');
+            try {
+                localStorage.setItem('test', 'working');
+                const value = localStorage.getItem('test');
+                if (value === 'working') {
+                    result.innerHTML = '<span class="success">✅ localStorage is working!</span>';
+                } else {
+                    result.innerHTML = '<span class="error">❌ localStorage test failed</span>';
+                }
+            } catch (e) {
+                result.innerHTML = '<span class="error">❌ localStorage error: ' + e.message + '</span>';
+            }
+        }
+        
+        function simulateJob() {
+            const result = document.getElementById('job-result');
+            const testJob = {
+                title: 'Test Software Engineer',
+                company: 'Test Company Inc.',
+                url: 'https://test.com/job',
+                applied: new Date().toISOString()
+            };
+            
+            try {
+                // Store job in localStorage
+                localStorage.setItem('newJob', JSON.stringify(testJob));
+                localStorage.setItem('newJobTimestamp', Date.now().toString());
+                
+                // Dispatch custom event
+                window.dispatchEvent(new CustomEvent('job-tracker-new-job', { 
+                    detail: testJob 
+                }));
+                
+                result.innerHTML = '<span class="success">✅ Job simulation sent! Check React app.</span>';
+                console.log('🧪 Test job dispatched:', testJob);
+            } catch (e) {
+                result.innerHTML = '<span class="error">❌ Job simulation failed: ' + e.message + '</span>';
+            }
+        }
+        
+        function checkReactApp() {
+            const result = document.getElementById('react-result');
+            
+            // Check if React app is running
+            fetch('http://localhost:3000/')
+                .then(response => {
+                    if (response.ok) {
+                        result.innerHTML = '<span class="success">✅ React app is running on port 3000!</span>';
+                    } else {
+                        result.innerHTML = '<span class="error">❌ React app returned status: ' + response.status + '</span>';
+                    }
+                })
+                .catch(error => {
+                    result.innerHTML = '<span class="error">❌ React app not accessible: ' + error.message + '</span>';
+                });
+        }
+        
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            console.log('🧪 Test page loaded');
+            testLocalStorage();
+        });
+    </script>
+</body>
+</html>
+
+
