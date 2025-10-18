@@ -25,7 +25,10 @@
     const titleEl = document.querySelector('h1') || document.querySelector('h2');
     const jobTitle = titleEl?.innerText?.trim() || 'Unknown title';
   
-    // 2.2  Company name – LinkedIn-specific selectors
+    // 2.2  Company name – Enhanced LinkedIn extraction
+    let companyName = 'Unknown company';
+    
+    // Try multiple approaches to get company name
     const companySelectors = [
       // LinkedIn job posting selectors (most current)
       '.job-details-jobs-unified-top-card__company-name',
@@ -38,15 +41,6 @@
       '.job-details-jobs-unified-top-card__company-name h1',
       // Alternative LinkedIn selectors
       '[data-test-id="job-details-company-name"]',
-      '.job-details-jobs-unified-top-card__company-name',
-      '.job-details-jobs-unified-top-card__company-name a',
-      '.job-details-jobs-unified-top-card__company-name span',
-      '.job-details-jobs-unified-top-card__company-name div',
-      '.job-details-jobs-unified-top-card__company-name h4',
-      '.job-details-jobs-unified-top-card__company-name h3',
-      '.job-details-jobs-unified-top-card__company-name h2',
-      '.job-details-jobs-unified-top-card__company-name h1',
-      // Additional LinkedIn selectors
       '.job-details-jobs-unified-top-card__company-name a span',
       '.job-details-jobs-unified-top-card__company-name span span',
       '.job-details-jobs-unified-top-card__company-name div span',
@@ -54,16 +48,48 @@
       '.job-details-jobs-unified-top-card__company-name h3 span',
       '.job-details-jobs-unified-top-card__company-name h2 span',
       '.job-details-jobs-unified-top-card__company-name h1 span',
+      // Additional LinkedIn selectors
+      '.job-details-jobs-unified-top-card__company-name a span span',
+      '.job-details-jobs-unified-top-card__company-name span span span',
+      '.job-details-jobs-unified-top-card__company-name div span span',
+      '.job-details-jobs-unified-top-card__company-name h4 span span',
+      '.job-details-jobs-unified-top-card__company-name h3 span span',
+      '.job-details-jobs-unified-top-card__company-name h2 span span',
+      '.job-details-jobs-unified-top-card__company-name h1 span span',
       // Generic fallbacks
       '.company', '.employer', '.companyName', '.jobsearch-CompanyInfoWithoutHeader',
       '.jobsearch-CompanyInfo', '.posted-company', '.text-muted'
     ];
-    let companyName = 'Unknown company';
+    
+    // Try selectors first
     for (const sel of companySelectors) {
       const el = document.querySelector(sel);
       if (el?.innerText && el.innerText.trim() !== '') {
         companyName = el.innerText.trim();
         break;
+      }
+    }
+    
+    // If still unknown, try to extract from page title or other sources
+    if (companyName === 'Unknown company') {
+      // Try to extract from page title (e.g., "Software Engineer at Google | LinkedIn")
+      const pageTitle = document.title;
+      const titleMatch = pageTitle.match(/at\s+([^|]+)/);
+      if (titleMatch) {
+        companyName = titleMatch[1].trim();
+      }
+      
+      // Try to extract from URL or other page elements
+      if (companyName === 'Unknown company') {
+        // Look for any text that might be a company name
+        const possibleCompanyElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, .company, .employer, [class*="company"], [class*="employer"]');
+        for (const el of possibleCompanyElements) {
+          const text = el.innerText?.trim();
+          if (text && text.length > 2 && text.length < 50 && !text.includes('LinkedIn') && !text.includes('Jobs')) {
+            companyName = text;
+            break;
+          }
+        }
       }
     }
   
