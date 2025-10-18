@@ -94,6 +94,16 @@ export default function App() {
     // Check every 2 seconds for new jobs
     const interval = setInterval(checkForNewJobs, 2000)
 
+    // Listen for storage events (when localStorage changes in other tabs)
+    const handleStorageChange = (e) => {
+      if (e.key === 'newJob' && e.newValue) {
+        console.log('🔄 Storage event detected - new job from another tab')
+        checkForNewJobs()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+
     // Set up real-time subscription
     const subscription = supabase
       .channel('jobs')
@@ -111,6 +121,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe()
       clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 
@@ -201,6 +212,20 @@ export default function App() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  console.log('🔍 Manual localStorage check')
+                  const newJob = localStorage.getItem('newJob')
+                  const newJobTimestamp = localStorage.getItem('newJobTimestamp')
+                  console.log('Current localStorage:', { newJob, newJobTimestamp })
+                  if (newJob) {
+                    console.log('Found job in localStorage:', JSON.parse(newJob))
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Check localStorage
+              </button>
               <button
                 onClick={refreshJobs}
                 disabled={loading}
