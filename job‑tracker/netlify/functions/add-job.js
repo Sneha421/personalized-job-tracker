@@ -14,6 +14,8 @@ exports.handler = async (event, context) => {
     const job = JSON.parse(event.body);
     
     console.log('Netlify function called with job:', job);
+    console.log('Environment check - NOTION_TOKEN:', process.env.NOTION_TOKEN ? 'SET' : 'NOT SET');
+    console.log('Environment check - NOTION_DB_ID:', process.env.NOTION_DB_ID ? 'SET' : 'NOT SET');
     
     // Check for environment variables
     if (!process.env.NOTION_TOKEN || !process.env.NOTION_DB_ID) {
