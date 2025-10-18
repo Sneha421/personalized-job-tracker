@@ -1,12 +1,5 @@
-const notionToken = import.meta.env.VITE_NOTION_TOKEN
-const databaseId = import.meta.env.VITE_NOTION_DB_ID
-
-console.log('Notion token exists:', !!notionToken)
-console.log('Database ID exists:', !!databaseId)
-
-if (!notionToken || !databaseId) {
-  console.warn('Notion credentials not found. Please set VITE_NOTION_TOKEN and VITE_NOTION_DB_ID in your .env file')
-}
+// Notion integration is handled server-side via Vercel API route
+// Environment variables are set in Vercel dashboard, not client-side
 
 /**
  * Add a job row to your Notion database.
