@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import { addJobToNotion } from './lib/notion'
 
 export default function App() {
   const [jobs, setJobs] = useState([])
@@ -46,8 +47,8 @@ export default function App() {
         if (now - timestamp < 5 * 60 * 1000) {
           console.log('New job detected from browser extension:', job)
           
-          // Add to Supabase
-          const addJobToSupabase = async () => {
+          // Add to both Supabase and Notion
+          const addJobToBoth = async () => {
             try {
               console.log('Attempting to insert job into Supabase:', job)
               const { data, error } = await supabase
@@ -66,6 +67,16 @@ export default function App() {
               setJobs(prev => [data, ...prev])
               setLastUpdate(new Date())
               
+              // Try to add to Notion
+              try {
+                console.log('Attempting to add job to Notion...')
+                await addJobToNotion(data)
+                console.log('Job added to Notion successfully')
+              } catch (notionError) {
+                console.error('Notion sync failed:', notionError)
+                // Don't fail the entire operation if Notion fails
+              }
+              
               // Clear the localStorage
               localStorage.removeItem('newJob')
               localStorage.removeItem('newJobTimestamp')
@@ -74,7 +85,7 @@ export default function App() {
             }
           }
           
-          addJobToSupabase()
+          addJobToBoth()
         }
       }
     }
@@ -142,11 +153,20 @@ export default function App() {
         .single()
       
       if (error) throw error
-      console.log('Test job added:', data)
+      console.log('Test job added to Supabase:', data)
       
       // Update local state
       setJobs(prev => [data, ...prev])
       setLastUpdate(new Date())
+      
+      // Try to add to Notion
+      try {
+        console.log('Attempting to add test job to Notion...')
+        await addJobToNotion(data)
+        console.log('Test job added to Notion successfully')
+      } catch (notionError) {
+        console.error('Notion sync failed for test job:', notionError)
+      }
     } catch (error) {
       console.error('Error adding test job:', error)
     }
