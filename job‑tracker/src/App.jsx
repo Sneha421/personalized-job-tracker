@@ -23,6 +23,55 @@ export default function App() {
 
     fetchJobs()
 
+    // Check for new jobs from browser extension
+    const checkForNewJobs = () => {
+      const newJob = localStorage.getItem('newJob')
+      const newJobTimestamp = localStorage.getItem('newJobTimestamp')
+      
+      if (newJob && newJobTimestamp) {
+        const job = JSON.parse(newJob)
+        const timestamp = parseInt(newJobTimestamp)
+        const now = Date.now()
+        
+        // Only process if the job is from the last 5 minutes (to avoid duplicates)
+        if (now - timestamp < 5 * 60 * 1000) {
+          console.log('New job detected from browser extension:', job)
+          
+          // Add to Supabase
+          const addJobToSupabase = async () => {
+            try {
+              const { data, error } = await supabase
+                .from('jobs')
+                .insert([job])
+                .select()
+                .single()
+              
+              if (error) throw error
+              console.log('Job added to Supabase:', data)
+              
+              // Update local state
+              setJobs(prev => [data, ...prev])
+              setLastUpdate(new Date())
+              
+              // Clear the localStorage
+              localStorage.removeItem('newJob')
+              localStorage.removeItem('newJobTimestamp')
+            } catch (error) {
+              console.error('Error adding job to Supabase:', error)
+            }
+          }
+          
+          addJobToSupabase()
+        }
+      }
+    }
+
+    // Check immediately
+    checkForNewJobs()
+
+    // Check every 2 seconds for new jobs
+    const interval = setInterval(checkForNewJobs, 2000)
+
     // Set up real-time subscription
     const subscription = supabase
       .channel('jobs')
@@ -43,6 +92,7 @@ export default function App() {
 
     return () => {
       subscription.unsubscribe()
+      clearInterval(interval)
     }
   }, [])
 
