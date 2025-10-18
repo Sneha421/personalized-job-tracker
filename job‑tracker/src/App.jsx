@@ -30,15 +30,19 @@ export default function App() {
       const newJobTimestamp = localStorage.getItem('newJobTimestamp')
       
       if (newJob && newJobTimestamp) {
+        console.log('🔄 New job detected from browser extension')
         const job = JSON.parse(newJob)
         const timestamp = parseInt(newJobTimestamp)
         const now = Date.now()
         
         // Only process if the job is from the last 5 minutes (to avoid duplicates)
         if (now - timestamp < 5 * 60 * 1000) {
+          console.log('📝 Processing job:', job.title, 'at', job.company)
+          
           // Add to both Supabase and Notion
           const addJobToBoth = async () => {
             try {
+              console.log('💾 Adding to Supabase...')
               const { data, error } = await supabase
                 .from('jobs')
                 .insert([job])
@@ -46,6 +50,7 @@ export default function App() {
                 .single()
               
               if (error) throw error
+              console.log('✅ Job added to Supabase:', data.id)
               
               // Update local state
               setJobs(prev => [data, ...prev])
@@ -53,20 +58,32 @@ export default function App() {
               
               // Try to add to Notion
               try {
-                await addJobToNotion(data)
+                console.log('📋 Adding to Notion...')
+                const notionResult = await addJobToNotion(data)
+                if (notionResult.success) {
+                  console.log('✅ Job added to both Supabase and Notion')
+                } else {
+                  console.log('⚠️ Job added to Supabase, but Notion sync failed:', notionResult.message)
+                }
               } catch (notionError) {
-                console.error('Notion sync failed:', notionError)
+                console.error('❌ Notion sync failed:', notionError)
               }
               
               // Clear the localStorage
               localStorage.removeItem('newJob')
               localStorage.removeItem('newJobTimestamp')
+              console.log('🧹 Cleared localStorage')
             } catch (error) {
-              console.error('Error adding job:', error)
+              console.error('❌ Error adding job:', error)
             }
           }
           
           addJobToBoth()
+        } else {
+          console.log('⏰ Job too old, ignoring')
+          // Clear old jobs
+          localStorage.removeItem('newJob')
+          localStorage.removeItem('newJobTimestamp')
         }
       }
     }

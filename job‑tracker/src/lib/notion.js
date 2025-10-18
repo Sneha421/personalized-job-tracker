@@ -1,9 +1,8 @@
-// Notion integration is handled server-side via Vercel API route
-// Environment variables are set in Vercel dashboard, not client-side
+import { Client } from '@notionhq/client'
 
 /**
  * Add a job row to your Notion database.
- * Uses Vercel API route for server-side Notion integration.
+ * Direct client-side Notion integration.
  *
  * @param {object} job
  *   { title: string, company: string, url: string, applied: string }
@@ -14,47 +13,53 @@ export async function addJobToNotion(job) {
     throw new Error('Invalid job data provided')
   }
   
+  // Check for environment variables
+  const notionToken = import.meta.env.VITE_NOTION_TOKEN
+  const notionDbId = import.meta.env.VITE_NOTION_DB_ID
+  
+  if (!notionToken || !notionDbId) {
+    console.log('Notion credentials not configured')
+    return {
+      success: false,
+      message: 'Notion credentials not configured. Please set VITE_NOTION_TOKEN and VITE_NOTION_DB_ID in your .env file.'
+    }
+  }
+  
   try {
-    console.log('Sending job to Vercel API:', job)
+    console.log('Adding job to Notion:', job)
     
-    // Call your Vercel API route instead of Notion directly
-    const response = await fetch('/api/add-job', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(job)
+    // Initialize Notion client
+    const notion = new Client({
+      auth: notionToken
     })
-    
-    if (!response.ok) {
-      // Handle 404 (API route not found) gracefully for local development
-      if (response.status === 404) {
-        console.log('Vercel API route not available in local development')
-        return {
-          success: false,
-          message: 'Notion integration requires Vercel deployment'
+
+    // Create a new page in the Notion database
+    const response = await notion.pages.create({
+      parent: { database_id: notionDbId },
+      properties: {
+        title: {
+          title: [{ text: { content: job.title } }]
+        },
+        company: {
+          rich_text: [{ text: { content: job.company } }]
+        },
+        url: {
+          url: job.url
+        },
+        applied: {
+          date: { start: job.applied }
         }
       }
-      
-      const errorData = await response.json()
-      throw new Error(`API error: ${response.status} - ${JSON.stringify(errorData)}`)
-    }
+    })
     
-    const result = await response.json()
-    console.log('Job synced to Notion successfully!')
-    return result
+    console.log('Job added to Notion successfully:', response.id)
+    return {
+      success: true,
+      notionPageId: response.id,
+      message: 'Job successfully added to Notion database'
+    }
   } catch (error) {
-    console.error('Notion sync error:', error)
-    
-    // Handle network errors gracefully for local development
-    if (error.message.includes('Failed to fetch') || error.message.includes('404')) {
-      console.log('Vercel API route not available in local development')
-      return {
-        success: false,
-        message: 'Notion integration requires Vercel deployment'
-      }
-    }
-    
+    console.error('Notion API error:', error)
     throw error
   }
 }
