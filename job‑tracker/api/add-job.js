@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Client } from '@notionhq/client';
 
 export default async function handler(req, res) {
   // Handle CORS
@@ -20,35 +21,84 @@ export default async function handler(req, res) {
   try {
     const job = req.body;
     console.log('Vercel function called with job:', job);
+    console.log('Environment check - SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET');
+    console.log('Environment check - SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+    console.log('Environment check - NOTION_TOKEN:', process.env.NOTION_TOKEN ? 'SET' : 'NOT SET');
+    console.log('Environment check - NOTION_DB_ID:', process.env.NOTION_DB_ID ? 'SET' : 'NOT SET');
     
-    // Initialize Supabase client
-    const supabase = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.VITE_SUPABASE_ANON_KEY
-    );
+    let supabaseData = null;
+    let notionData = null;
     
-    // Insert into Supabase
-    console.log('Inserting job into Supabase...');
-    const { data, error } = await supabase
-      .from('jobs')
-      .insert([job])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Supabase error:', error);
-      return res.status(500).json({
-        success: false,
-        error: `Supabase error: ${error.message}`
-      });
+    // 1️⃣ Insert into Supabase
+    if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
+      try {
+        console.log('Inserting job into Supabase...');
+        const supabase = createClient(
+          process.env.VITE_SUPABASE_URL,
+          process.env.VITE_SUPABASE_ANON_KEY
+        );
+        
+        const { data, error } = await supabase
+          .from('jobs')
+          .insert([job])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        supabaseData = data;
+        console.log('Job inserted into Supabase:', supabaseData);
+      } catch (error) {
+        console.error('Supabase error:', error);
+        return res.status(500).json({
+          success: false,
+          error: `Supabase error: ${error.message}`
+        });
+      }
+    } else {
+      console.log('Supabase credentials not configured');
     }
     
-    console.log('Job inserted into Supabase:', data);
+    // 2️⃣ Insert into Notion
+    if (process.env.NOTION_TOKEN && process.env.NOTION_DB_ID) {
+      try {
+        console.log('Inserting job into Notion...');
+        const notion = new Client({
+          auth: process.env.NOTION_TOKEN
+        });
+
+        const response = await notion.pages.create({
+          parent: { database_id: process.env.NOTION_DB_ID },
+          properties: {
+            title: {
+              title: [{ text: { content: job.title } }]
+            },
+            company: {
+              rich_text: [{ text: { content: job.company } }]
+            },
+            url: {
+              url: job.url
+            },
+            applied: {
+              date: { start: job.applied }
+            }
+          }
+        });
+        
+        notionData = response;
+        console.log('Job inserted into Notion:', notionData);
+      } catch (error) {
+        console.error('Notion error:', error);
+        // Don't fail the entire request if Notion fails
+      }
+    } else {
+      console.log('Notion credentials not configured');
+    }
     
     return res.status(200).json({
       success: true,
-      data: data,
-      message: 'Job successfully added to Supabase'
+      supabaseData: supabaseData,
+      notionData: notionData,
+      message: `Job successfully added to ${supabaseData ? 'Supabase' : ''}${supabaseData && notionData ? ' and ' : ''}${notionData ? 'Notion' : ''}`
     });
 
   } catch (error) {
