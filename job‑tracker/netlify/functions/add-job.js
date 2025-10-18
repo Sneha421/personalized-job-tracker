@@ -1,4 +1,5 @@
 const { Client } = require('@notionhq/client');
+const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event, context) => {
   // Handle CORS preflight requests
@@ -33,10 +34,45 @@ exports.handler = async (event, context) => {
     console.log('Netlify function called with job:', job);
     console.log('Environment check - NOTION_TOKEN:', process.env.NOTION_TOKEN ? 'SET' : 'NOT SET');
     console.log('Environment check - NOTION_DB_ID:', process.env.NOTION_DB_ID ? 'SET' : 'NOT SET');
+    console.log('Environment check - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+    console.log('Environment check - SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
     
-    // Check for environment variables
+    // Initialize Supabase client
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY
+    );
+    
+    // 1️⃣ Insert into Supabase first
+    console.log('Inserting job into Supabase...');
+    const { data: supabaseData, error: supabaseError } = await supabase
+      .from('jobs')
+      .insert([job])
+      .select()
+      .single();
+    
+    if (supabaseError) {
+      console.error('Supabase error:', supabaseError);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({
+          success: false,
+          error: `Supabase error: ${supabaseError.message}`
+        })
+      };
+    }
+    
+    console.log('Job inserted into Supabase:', supabaseData);
+    
+    // Check for Notion credentials
     if (!process.env.NOTION_TOKEN || !process.env.NOTION_DB_ID) {
-      console.log('Missing Notion credentials');
+      console.log('Missing Notion credentials - skipping Notion sync');
       return {
         statusCode: 200,
         headers: {
@@ -46,8 +82,9 @@ exports.handler = async (event, context) => {
           'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         body: JSON.stringify({
-          success: false,
-          message: 'Notion credentials not configured. Please set NOTION_TOKEN and NOTION_DB_ID environment variables in Netlify.'
+          success: true,
+          message: 'Job added to Supabase successfully. Notion sync skipped (credentials not configured).',
+          supabaseData: supabaseData
         })
       };
     }
@@ -90,8 +127,9 @@ exports.handler = async (event, context) => {
       },
       body: JSON.stringify({
         success: true,
+        supabaseData: supabaseData,
         notionPageId: response.id,
-        message: 'Job successfully added to Notion database'
+        message: 'Job successfully added to both Supabase and Notion database'
       })
     };
 
