@@ -1,33 +1,38 @@
 {
-    "name": "Job‑Tracker",
-    "description": "Automatically logs job applications to Notion",
-    "version": "1.3",
-    "manifest_version": 3,
+  "name": "Job‑Tracker (Local)",
+  "description": "Automatically logs job applications to a local backend, Supabase & Notion",
+  "version": "1.0",
+  "manifest_version": 3,
+
+ 
+  "permissions": [
+    "storage",
+    "scripting",
+    "tabs",
+    "activeTab"
+  ],
+
+
+  "host_permissions": [
+    "*://*/*"
+  ],
+
+
+  "action": {
+    "default_title": "Job‑Tracker"
+  },
+
   
-    "permissions": [
-      "scripting",
-      "storage",
-      "tabs",
-      "activeTab"
-    ],
+  "background": {
+    "service_worker": "background.js"
+  },
+
   
-    "host_permissions": [
-      "*://*/*"          
-    ],
-  
-    "action": {
-      "default_title": "Job‑Tracker"
-    },
-  
-    "background": {
-      "service_worker": "background.js"
-    },
-  
-    "content_scripts": [
-      {
-        "matches": ["*://*/*"],
-        "js": ["content.js"],
-        "run_at": "document_end"
-      }
-    ]
-  }
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
