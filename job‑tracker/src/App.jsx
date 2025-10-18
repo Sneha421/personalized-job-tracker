@@ -8,21 +8,28 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
-  // Load realtime updates from Supabase
+  // Load jobs from localStorage
   useEffect(() => {
-    const fetchJobs = async () => {
+    const loadJobsFromStorage = () => {
       try {
-        const { data, error } = await supabase.from('jobs').select('*').order('applied', { ascending: false })
-        if (error) throw error
-        setJobs(data || [])
+        const storedJobs = localStorage.getItem('jobTrackerJobs')
+        if (storedJobs) {
+          const jobs = JSON.parse(storedJobs)
+          setJobs(jobs)
+          console.log('📋 Loaded jobs from localStorage:', jobs.length)
+        } else {
+          setJobs([])
+          console.log('📋 No jobs found in localStorage')
+        }
       } catch (error) {
-        console.error('Error fetching jobs:', error)
+        console.error('Error loading jobs from localStorage:', error)
+        setJobs([])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchJobs()
+    loadJobsFromStorage()
 
     // Check for new jobs from browser extension
     const checkForNewJobs = () => {
@@ -39,46 +46,71 @@ export default function App() {
         if (now - timestamp < 5 * 60 * 1000) {
           console.log('📝 Processing job:', job.title, 'at', job.company)
           
-          // Add to both Supabase and Notion
-          const addJobToBoth = async () => {
+          // Add job to localStorage AND sync to Supabase/Notion
+          const addJobToStorage = async () => {
             try {
-              console.log('💾 Adding to Supabase...')
-              const { data, error } = await supabase
-                .from('jobs')
-                .insert([job])
-                .select()
-                .single()
+              console.log('💾 Adding job to localStorage...')
               
-              if (error) throw error
-              console.log('✅ Job added to Supabase:', data.id)
+              // Add unique ID to job
+              const jobWithId = {
+                ...job,
+                id: Date.now().toString(),
+                createdAt: new Date().toISOString()
+              }
+              
+              // Get existing jobs from localStorage
+              const existingJobs = JSON.parse(localStorage.getItem('jobTrackerJobs') || '[]')
+              
+              // Add new job to the beginning
+              const updatedJobs = [jobWithId, ...existingJobs]
+              
+              // Save to localStorage
+              localStorage.setItem('jobTrackerJobs', JSON.stringify(updatedJobs))
               
               // Update local state
-              setJobs(prev => [data, ...prev])
+              setJobs(updatedJobs)
               setLastUpdate(new Date())
               
-              // Try to add to Notion
+              console.log('✅ Job added to localStorage:', jobWithId.title, 'at', jobWithId.company)
+              
+              // Sync to Supabase
               try {
-                console.log('📋 Adding to Notion...')
-                const notionResult = await addJobToNotion(data)
+                console.log('💾 Syncing to Supabase...')
+                const { data: supabaseData, error: supabaseError } = await supabase
+                  .from('jobs')
+                  .insert([job])
+                  .select()
+                  .single()
+                
+                if (supabaseError) throw supabaseError
+                console.log('✅ Job synced to Supabase:', supabaseData.id)
+              } catch (supabaseError) {
+                console.error('❌ Supabase sync failed:', supabaseError)
+              }
+              
+              // Sync to Notion
+              try {
+                console.log('📋 Syncing to Notion...')
+                const notionResult = await addJobToNotion(jobWithId)
                 if (notionResult.success) {
-                  console.log('✅ Job added to both Supabase and Notion')
+                  console.log('✅ Job synced to Notion')
                 } else {
-                  console.log('⚠️ Job added to Supabase, but Notion sync failed:', notionResult.message)
+                  console.log('⚠️ Notion sync failed:', notionResult.message)
                 }
               } catch (notionError) {
                 console.error('❌ Notion sync failed:', notionError)
               }
               
-              // Clear the localStorage
+              // Clear the newJob localStorage
               localStorage.removeItem('newJob')
               localStorage.removeItem('newJobTimestamp')
-              console.log('🧹 Cleared localStorage')
+              console.log('🧹 Cleared newJob localStorage')
             } catch (error) {
-              console.error('❌ Error adding job:', error)
+              console.error('❌ Error adding job to localStorage:', error)
             }
           }
           
-          addJobToBoth()
+          addJobToStorage()
         } else {
           console.log('⏰ Job too old, ignoring')
           // Clear old jobs
@@ -134,12 +166,18 @@ export default function App() {
   }, [])
 
   // Manual refresh function
-  const refreshJobs = async () => {
+  const refreshJobs = () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('jobs').select('*').order('applied', { ascending: false })
-      if (error) throw error
-      setJobs(data || [])
+      const storedJobs = localStorage.getItem('jobTrackerJobs')
+      if (storedJobs) {
+        const jobs = JSON.parse(storedJobs)
+        setJobs(jobs)
+        console.log('🔄 Refreshed jobs from localStorage:', jobs.length)
+      } else {
+        setJobs([])
+        console.log('🔄 No jobs found in localStorage')
+      }
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Error refreshing jobs:', error)
