@@ -1,7 +1,7 @@
 {
-  "name": "Job‑Tracker (Local)",
-  "description": "Automatically logs job applications to a local backend, Supabase & Notion",
-  "version": "8.0",
+  "name": "Job‑Tracker (Notion Only)",
+  "description": "Automatically logs job applications directly to Notion database",
+  "version": "10.0",
   "manifest_version": 3,
 
  

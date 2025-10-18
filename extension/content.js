@@ -172,56 +172,30 @@ function extractJobData() {
    3️⃣  Post the job to localStorage for React app
    ---------------------------------------------------------- */
 async function postJob(job) {
-  console.log('Job-Tracker: Storing job data locally:', job);
+  console.log('Job-Tracker: Syncing job to Notion:', job);
   
   try {
-    // Store job in localStorage for the React app to pick up
-    localStorage.setItem('newJob', JSON.stringify(job));
-    localStorage.setItem('newJobTimestamp', Date.now().toString());
-    
-    // Use BroadcastChannel to communicate across tabs
-    console.log('🔊 Creating BroadcastChannel for cross-tab communication');
-    const channel = new BroadcastChannel('job-tracker');
-    channel.postMessage({
-      type: 'new-job',
-      job: job
-    });
-    console.log('🔊 BroadcastChannel message sent:', { type: 'new-job', job });
-    channel.close();
-    
-    // Also trigger a custom event for same-tab communication
-    window.dispatchEvent(new CustomEvent('job-tracker-new-job', { 
-      detail: job 
-    }));
-    
     // Directly sync to Notion via local server
-    try {
-      console.log('📋 Syncing to Notion directly from extension...');
-      const response = await fetch('http://localhost:4000/api/notion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(job)
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Job synced to Notion:', result);
-        showToast(`✅ Applied to "${job.title}" at ${job.company} - Synced to Notion!`);
-      } else {
-        console.error('❌ Notion sync failed:', response.status);
-        showToast(`✅ Applied to "${job.title}" at ${job.company} - Notion sync failed`);
-      }
-    } catch (notionError) {
-      console.error('❌ Notion sync error:', notionError);
-      showToast(`✅ Applied to "${job.title}" at ${job.company} - Notion sync error`);
-    }
+    console.log('📋 Syncing to Notion...');
+    const response = await fetch('http://localhost:4000/api/notion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(job)
+    });
     
-    console.info('Job‑Tracker: job stored locally and synced to Notion', job);
-  } catch (err) {
-    console.error('Job‑Tracker: storage error', err);
-    showToast('⚠️  Failed to save job');
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Job synced to Notion:', result);
+      showToast(`✅ Applied to "${job.title}" at ${job.company} - Added to Notion!`);
+    } else {
+      console.error('❌ Notion sync failed:', response.status);
+      showToast(`❌ Failed to sync "${job.title}" to Notion`);
+    }
+  } catch (error) {
+    console.error('❌ Notion sync error:', error);
+    showToast(`❌ Error syncing "${job.title}" to Notion`);
   }
 }
 
