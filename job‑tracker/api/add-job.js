@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200).json({ message: 'CORS preflight' });
   }
   
   // Only allow POST requests
