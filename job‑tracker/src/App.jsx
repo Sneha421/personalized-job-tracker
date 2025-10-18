@@ -11,8 +11,13 @@ export default function App() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
+        console.log('Fetching jobs from Supabase...')
+        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET')
+        console.log('Supabase Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET')
+        
         const { data, error } = await supabase.from('jobs').select('*').order('applied', { ascending: false })
         if (error) throw error
+        console.log('Jobs fetched:', data)
         setJobs(data || [])
       } catch (error) {
         console.error('Error fetching jobs:', error)
@@ -28,10 +33,14 @@ export default function App() {
       const newJob = localStorage.getItem('newJob')
       const newJobTimestamp = localStorage.getItem('newJobTimestamp')
       
+      console.log('Checking for new jobs:', { newJob, newJobTimestamp })
+      
       if (newJob && newJobTimestamp) {
         const job = JSON.parse(newJob)
         const timestamp = parseInt(newJobTimestamp)
         const now = Date.now()
+        
+        console.log('Job found:', job, 'Timestamp:', timestamp, 'Now:', now, 'Diff:', now - timestamp)
         
         // Only process if the job is from the last 5 minutes (to avoid duplicates)
         if (now - timestamp < 5 * 60 * 1000) {
@@ -40,13 +49,17 @@ export default function App() {
           // Add to Supabase
           const addJobToSupabase = async () => {
             try {
+              console.log('Attempting to insert job into Supabase:', job)
               const { data, error } = await supabase
                 .from('jobs')
                 .insert([job])
                 .select()
                 .single()
               
-              if (error) throw error
+              if (error) {
+                console.error('Supabase insert error:', error)
+                throw error
+              }
               console.log('Job added to Supabase:', data)
               
               // Update local state
@@ -121,6 +134,7 @@ export default function App() {
         applied: new Date().toISOString()
       }
       
+      console.log('Adding test job directly to Supabase:', testJob)
       const { data, error } = await supabase
         .from('jobs')
         .insert([testJob])
@@ -129,9 +143,27 @@ export default function App() {
       
       if (error) throw error
       console.log('Test job added:', data)
+      
+      // Update local state
+      setJobs(prev => [data, ...prev])
+      setLastUpdate(new Date())
     } catch (error) {
       console.error('Error adding test job:', error)
     }
+  }
+
+  // Test function to simulate browser extension
+  const testExtensionSync = () => {
+    const testJob = {
+      title: 'Extension Test Job',
+      company: 'Extension Test Company',
+      url: 'https://extension-test.com',
+      applied: new Date().toISOString()
+    }
+    
+    console.log('Simulating browser extension job:', testJob)
+    localStorage.setItem('newJob', JSON.stringify(testJob))
+    localStorage.setItem('newJobTimestamp', Date.now().toString())
   }
 
   const stats = {
@@ -205,6 +237,12 @@ export default function App() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={testExtensionSync}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Test Extension Sync
+              </button>
               <button
                 onClick={testAddJob}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
