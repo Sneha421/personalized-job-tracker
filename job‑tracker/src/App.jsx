@@ -5,6 +5,7 @@ export default function App() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
 
   // Load realtime updates from Supabase
   useEffect(() => {
@@ -29,17 +30,59 @@ export default function App() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'jobs' },
         payload => {
+          console.log('Real-time update received:', payload)
           if (payload.eventType === 'INSERT') {
+            console.log('New job added:', payload.new)
             setJobs(prev => [payload.new, ...prev])
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Subscription status:', status)
+      })
 
     return () => {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Manual refresh function
+  const refreshJobs = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase.from('jobs').select('*').order('applied', { ascending: false })
+      if (error) throw error
+      setJobs(data || [])
+      setLastUpdate(new Date())
+    } catch (error) {
+      console.error('Error refreshing jobs:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Test function to add a job manually
+  const testAddJob = async () => {
+    try {
+      const testJob = {
+        title: 'Test Job',
+        company: 'Test Company',
+        url: 'https://example.com',
+        applied: new Date().toISOString()
+      }
+      
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert([testJob])
+        .select()
+        .single()
+      
+      if (error) throw error
+      console.log('Test job added:', data)
+    } catch (error) {
+      console.error('Error adding test job:', error)
+    }
+  }
 
   const stats = {
     total: jobs.length,
@@ -107,10 +150,28 @@ export default function App() {
             <div>
               <h1 className="text-3xl font-bold">Job Tracker</h1>
               <p className="text-gray-400">Track your job applications automatically</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-400">{stats.total}</div>
-              <div className="text-sm text-gray-400">Total Applications</div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={testAddJob}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Test Add Job
+              </button>
+              <button
+                onClick={refreshJobs}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-400">{stats.total}</div>
+                <div className="text-sm text-gray-400">Total Applications</div>
+              </div>
             </div>
           </div>
         </div>
