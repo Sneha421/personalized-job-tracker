@@ -1,7 +1,7 @@
 {
-  "name": "Job‑Tracker (Notion Only)",
-  "description": "Automatically logs job applications directly to Notion database",
-  "version": "10.0",
+  "name": "Job‑Tracker (Simple HTML)",
+  "description": "Simple HTML tag extraction for all job sites",
+  "version": "14.0",
   "manifest_version": 3,
 
  

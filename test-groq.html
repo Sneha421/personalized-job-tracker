@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Groq AI Job Extraction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .job-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .job-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .company {
+            font-size: 18px;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        .apply-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .apply-btn:hover {
+            background: #45a049;
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Groq AI Job Extraction Test</h1>
+        
+        <div class="job-card">
+            <div class="job-title">Senior Software Engineer</div>
+            <div class="company">🏢 Google</div>
+            <p>Join our team to build amazing products that impact billions of users worldwide.</p>
+            <button class="apply-btn" onclick="testExtraction()">Apply Now</button>
+        </div>
+
+        <div class="job-card">
+            <div class="job-title">AI/ML Engineer</div>
+            <div class="company">🏢 Microsoft</div>
+            <p>Work on cutting-edge AI technologies and machine learning models.</p>
+            <button class="apply-btn" onclick="testExtraction()">Quick Apply</button>
+        </div>
+
+        <div class="job-card">
+            <div class="job-title">Full Stack Developer</div>
+            <div class="company">🏢 Amazon</div>
+            <p>Build scalable web applications and cloud infrastructure.</p>
+            <button class="apply-btn" onclick="testExtraction()">Submit Application</button>
+        </div>
+
+        <div id="result" class="result" style="display: none;">
+            <h3>🎯 Groq AI Extraction Result:</h3>
+            <pre id="extractionResult"></pre>
+        </div>
+    </div>
+
+    <script>
+        async function testExtraction() {
+            console.log('🤖 Testing Groq AI extraction...');
+            
+            try {
+                const response = await fetch('http://localhost:4000/api/groq-extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pageContent: document.documentElement.outerHTML,
+                        url: window.location.href
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Groq AI result:', result);
+                    
+                    document.getElementById('result').style.display = 'block';
+                    document.getElementById('extractionResult').textContent = JSON.stringify(result.jobData, null, 2);
+                } else {
+                    console.error('❌ Groq AI failed:', response.status);
+                    alert('Groq AI extraction failed. Check console for details.');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('Error testing Groq AI extraction: ' + error.message);
+            }
+        }
+
+        // Show instructions
+        console.log('🚀 Groq AI Job Extraction Test Page');
+        console.log('📝 Click any "Apply" button to test Groq AI extraction');
+        console.log('🔧 Make sure the server is running: node server.js');
+        console.log('🔑 Set GROQ_API_KEY in your .env file for full functionality');
+    </script>
+</body>
+</html>

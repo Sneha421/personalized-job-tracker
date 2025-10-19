@@ -51,7 +51,48 @@ function isApplyButton(el) {
 /* ----------------------------------------------------------
    2️⃣  Harvest job information (simple heuristics)
    ---------------------------------------------------------- */
-function extractJobData() {
+async function extractJobData() {
+  console.log('🤖 Using Groq AI to extract job data...');
+  
+  try {
+    // Get the page content for AI analysis (limit size to avoid payload issues)
+    const pageContent = document.documentElement.outerHTML.substring(0, 100000); // Limit to 100KB
+    const url = window.location.href;
+    
+    console.log('📄 Sending page content to Groq AI...');
+    
+    // Call Groq AI extraction endpoint
+    const response = await fetch('http://localhost:4000/api/groq-extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pageContent,
+        url
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Groq AI extracted job data:', result.jobData);
+      return result.jobData;
+    } else {
+      console.error('❌ Groq AI extraction failed:', response.status);
+      return fallbackExtraction();
+    }
+  } catch (error) {
+    console.error('❌ Groq AI extraction error:', error);
+    return fallbackExtraction();
+  }
+}
+
+/* ----------------------------------------------------------
+   2️⃣  Fallback extraction (if Groq AI fails)
+   ---------------------------------------------------------- */
+function fallbackExtraction() {
+  console.log('🔄 Using fallback extraction...');
+  
   // 2.1  Job title - Universal extraction
   let jobTitle = 'Unknown title';
   
@@ -152,7 +193,7 @@ function extractJobData() {
   const appliedAt = new Date().toISOString();
   
   // Debug logging
-  console.log('Job-Tracker: Extracted data:', {
+  console.log('Job-Tracker: Fallback extracted data:', {
     title: jobTitle,
     company: companyName,
     url,
@@ -227,7 +268,7 @@ function init() {
   console.log('🚀 Job-Tracker extension loaded and ready!');
   console.log('🔍 Extension is active on:', window.location.href);
   
-  document.body.addEventListener('click', (e) => {
+  document.body.addEventListener('click', async (e) => {
     const el = e.target.closest(APPLY_BUTTONS.join(','));
     if (!el || !isApplyButton(el)) return;
 
@@ -236,7 +277,7 @@ function init() {
     // Optional: prevent the original navigation so you stay on the page
     // e.preventDefault();
 
-    const job = extractJobData();
+    const job = await extractJobData();
     postJob(job);
   }, { capture: true, passive: true });
 }

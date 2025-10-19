@@ -30,15 +30,24 @@ A simple browser extension that automatically tracks job applications and syncs 
    - **Notion Token**: Create an integration at https://www.notion.so/my-integrations
    - **Database ID**: Copy from your database URL
 
-### 3. Configure Environment
+### 3. Setup Groq AI (Optional but Recommended)
+1. Get your Groq API key:
+   - Sign up at https://console.groq.com/
+   - Create an API key
+   - **Groq API Key**: Copy your API key
+
+**Note**: Groq AI provides intelligent job data extraction that works across all job sites. Without it, the extension uses fallback extraction methods.
+
+### 4. Configure Environment
 Create a `.env` file in the root directory:
 ```
 NOTION_TOKEN=your_notion_token_here
 NOTION_DB_ID=your_notion_database_id_here
+GROQ_API_KEY=your_groq_api_key_here
 PORT=4000
 ```
 
-### 4. Start the Server
+### 5. Start the Server
 ```bash
 npm install
 node server.js
@@ -49,7 +58,8 @@ node server.js
 1. **Start the server**: `node server.js`
 2. **Go to any job site** (LinkedIn, Indeed, etc.)
 3. **Click "Apply"** on any job posting
-4. **See the job** automatically added to your Notion database with auto-incrementing ID
+4. **Groq AI intelligently extracts** job title and company name from any website layout
+5. **See the job** automatically added to your Notion database with auto-incrementing ID
 
 ## 📁 Project Structure
 
@@ -67,10 +77,12 @@ job-tracker/
 ## 🔧 Features
 
 - ✅ **Auto job detection** on any job site
+- ✅ **Groq AI extraction** - intelligently finds job title and company from any website layout
+- ✅ **Fallback extraction** - works even without Groq AI
 - ✅ **Direct Notion sync** with auto-incrementing IDs
 - ✅ **Real-time updates** to your Notion database
 - ✅ **Toast notifications** for confirmation
-- ✅ **No external dependencies** - works completely offline
+- ✅ **Universal compatibility** - works on LinkedIn, Indeed, Glassdoor, and more
 - ✅ **Simple setup** - just extension + server
 
 ## 🎯 What You Get

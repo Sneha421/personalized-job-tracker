@@ -4,10 +4,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('@notionhq/client');
+const { extractJobData } = require('./lib/groq');
 
 const app = express();
 app.use(cors({ origin: '*' }));      // Allow all origins
-app.use(express.json());             // Parse JSON bodies
+app.use(express.json({ limit: '50mb' })); // Parse JSON bodies with larger limit
 
 // Environment variables with fallbacks
 const NOTION_TOKEN = process.env.NOTION_TOKEN || 'your_notion_token_here';
@@ -16,7 +17,25 @@ const NOTION_DB_ID = process.env.NOTION_DB_ID || 'your_notion_db_id_here';
 // 5️⃣  Notion client
 const notion = new Client({ auth: NOTION_TOKEN });
 
-// 6️⃣  POST route for Notion only
+// 6️⃣  POST route for rule-based job extraction
+app.post('/api/groq-extract', async (req, res) => {
+  const { pageContent, url } = req.body;
+  
+  if (!pageContent || !url) {
+    return res.status(400).json({ error: 'Missing pageContent or url' });
+  }
+
+  try {
+    console.log('🔍 Extracting job data with rule-based extraction...');
+    const jobData = await extractJobData(pageContent, url);
+    return res.json({ success: true, jobData });
+  } catch (error) {
+    console.error('❌ Rule-based extraction error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 7️⃣  POST route for Notion only
 app.post('/api/notion', async (req, res) => {
   const { title, company, url, applied } = req.body;
   if (!title || !company || !url || !applied) {
